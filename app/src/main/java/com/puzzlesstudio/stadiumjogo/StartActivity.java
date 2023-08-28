@@ -1,33 +1,16 @@
-package app.com.stadiumslide;
-
-import static android.content.ContentValues.TAG;
+package com.puzzlesstudio.stadiumjogo;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
-import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
-import android.net.NetworkRequest;
 import android.net.Uri;
-import android.nfc.Tag;
 import android.os.Bundle;
-import android.os.Handler;
-import android.telephony.PhoneStateListener;
-import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -37,19 +20,16 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
-import com.google.firebase.ktx.Firebase;
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
-import com.google.firebase.remoteconfig.FirebaseRemoteConfigServerException;
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
 import com.onesignal.OneSignal;
 
 public class StartActivity extends AppCompatActivity {
-    private static final String ONESIGNAL_APP_ID = "6a29b0b4-e4df-4fbc-9418-255c5e297805";
+    private static final String ONESIGNAL_APP_ID = "85dd7e3d-8a2e-42b7-b3ea-b7903d20ade6";
     private WebView NAME_WEB_VIEW_SHOW;
     private FirebaseRemoteConfig remoteConfig;
     private String savedNickname = "";
@@ -115,7 +95,7 @@ public class StartActivity extends AppCompatActivity {
     }
     private void onFetchAndActivateSuccess() {
         NAME_WEB_VIEW_SHOW.setVisibility(View.VISIBLE);
-            String mainLink = remoteConfig.getString("main_link");
+            String mainLink = remoteConfig.getString("stadium_link_main");
             NAME_WEB_VIEW_SHOW.loadUrl(mainLink);
             NAME_WEB_VIEW_SHOW.setWebViewClient(new WebViewClient());
 
@@ -126,7 +106,7 @@ public class StartActivity extends AppCompatActivity {
         ImageButton exit_btn = findViewById(R.id.exit_btn);
         ImageButton start_btn = findViewById(R.id.play_btn);
         ImageButton info_btn = findViewById(R.id.info_btn);
-        String policyLink = remoteConfig.getString("policy_link");
+        String policyLink = remoteConfig.getString("stadium_link_policy");
         info_btn.setOnClickListener(view -> {
             view.startAnimation(buttonAnimation);
 

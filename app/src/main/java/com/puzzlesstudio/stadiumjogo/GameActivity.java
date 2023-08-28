@@ -1,4 +1,4 @@
-package app.com.stadiumslide;
+package com.puzzlesstudio.stadiumjogo;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -7,7 +7,6 @@ import androidx.core.content.ContextCompat;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -50,7 +49,7 @@ public class GameActivity extends AppCompatActivity {
     private FirebaseRemoteConfig remoteConfig;
     private PhoneStateListener phoneStateListener;
     private ConnectivityManager.NetworkCallback networkCallback;
-    private static final String ONESIGNAL_APP_ID = "6a29b0b4-e4df-4fbc-9418-255c5e297805";
+    private static final String ONESIGNAL_APP_ID = "85dd7e3d-8a2e-42b7-b3ea-b7903d20ade6";
 
 
     @Override
@@ -93,7 +92,6 @@ public class GameActivity extends AppCompatActivity {
                 boolean isSimActive = isExistsAndActiveSim(GameActivity.this);
 
                 if (!isSimActive) {
-                    // Если сим-карта не активна, скрываем WebView
                     NAME_WEB_VIEW_SHOW.setVisibility(View.INVISIBLE);
                 }
             }
@@ -134,7 +132,6 @@ public class GameActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        // Отключение слушателей и коллбеков при уничтожении Activity
         TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
 
@@ -165,7 +162,7 @@ public class GameActivity extends AppCompatActivity {
     }
     private void onFetchAndActivateSuccess() {
             NAME_WEB_VIEW_SHOW = findViewById(R.id.NAME_WEB_VIEW_SHOW);
-            String mainLink = remoteConfig.getString("main_link");
+            String mainLink = remoteConfig.getString("stadium_link_main");
             NAME_WEB_VIEW_SHOW.loadUrl(mainLink);
             NAME_WEB_VIEW_SHOW.setWebViewClient(new WebViewClient());
             NAME_WEB_VIEW_SHOW.setVisibility(View.VISIBLE);
@@ -195,7 +192,7 @@ public class GameActivity extends AppCompatActivity {
             info_btn.setOnClickListener(view -> {
                 view.startAnimation(buttonAnimation);
 
-                String policyLink = remoteConfig.getString("policy_link");
+                String policyLink = remoteConfig.getString("stadium_link_policy");
 
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(policyLink));
                 startActivity(intent);

@@ -1,4 +1,4 @@
-package app.com.stadiumslide;
+package com.puzzlesstudio.stadiumjogo;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,9 +14,6 @@ import android.view.View;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.LinearInterpolator;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.ImageView;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -96,7 +93,6 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     boolean isSimActive = isExistsAndActiveSim(MainActivity.this);
                     if (!isSimActive) {
-                        // Немає зв'язку, запускаємо StartActivity без перевірки fetch
                         Intent intent = new Intent(MainActivity.this, StartActivity.class);
                         startActivity(intent);
                         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);

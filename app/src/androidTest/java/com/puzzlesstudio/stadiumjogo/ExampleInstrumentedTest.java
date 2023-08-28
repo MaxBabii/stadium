@@ -1,4 +1,4 @@
-package app.com.stadiumslide;
+package com.puzzlesstudio.stadiumjogo;
 
 import android.content.Context;
 
