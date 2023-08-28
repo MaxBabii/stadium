@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "827744490739",
+    "project_id": "stadium-slide",
+    "storage_bucket": "stadium-slide.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:827744490739:android:e8fbb79d0ea8225c5f9386",
+        "android_client_info": {
+          "package_name": "app.com.stadiumslide"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "827744490739-age6cidp8cj5bcjor8kk4hdbnsalh940.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDaLWYlK47L9dpZMg7_PpIBXodzgfgiMBs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "827744490739-age6cidp8cj5bcjor8kk4hdbnsalh940.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,23 +1,40 @@
 package app.com.stadiumslide;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.Uri;
 import android.os.Bundle;
+import android.telephony.PhoneStateListener;
+import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.animation.TranslateAnimation;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
+import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
+import com.onesignal.OneSignal;
 
 import java.util.Random;
 
@@ -28,7 +45,14 @@ public class GameActivity extends AppCompatActivity {
     private ImageButton[][] buttons;
     private int[] tiles;
     private int count = 0;
+    private boolean isElseCondition = false;
     private WebView NAME_WEB_VIEW_SHOW;
+    private FirebaseRemoteConfig remoteConfig;
+    private PhoneStateListener phoneStateListener;
+    private ConnectivityManager.NetworkCallback networkCallback;
+    private static final String ONESIGNAL_APP_ID = "6a29b0b4-e4df-4fbc-9418-255c5e297805";
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -36,56 +60,166 @@ public class GameActivity extends AppCompatActivity {
         View decorView = getWindow().getDecorView();
         int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
         decorView.setSystemUiVisibility(uiOptions);
-        ImageButton restart_btn = findViewById(R.id.restart_btn);
-        ImageButton back_btn = findViewById(R.id.back_btn);
-        ImageButton exit_btn = findViewById(R.id.game_exit_btn);
-        ImageButton info_btn = findViewById(R.id.game_info_btn);
-        TextView nick = findViewById(R.id.nick);
-        final Animation buttonAnimation = AnimationUtils.loadAnimation(this, R.anim.button_scale);
-        back_btn.setOnClickListener(view -> {
-            view.startAnimation(buttonAnimation);
-            Intent intent = new Intent(GameActivity.this, StartActivity.class);
-            startActivity(intent);
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-        });
-        exit_btn.setOnClickListener(view -> {
-            view.startAnimation(buttonAnimation);
-            Intent intent = new Intent(Intent.ACTION_MAIN);
-            intent.addCategory(Intent.CATEGORY_HOME);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-        });
-        info_btn.setOnClickListener(view -> {
-            view.startAnimation(buttonAnimation);
 
-            String websiteUrl = "https://www.olx.ua/uk/";
+        OneSignal.initWithContext(this, ONESIGNAL_APP_ID);
 
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(websiteUrl));
-            startActivity(intent);
-        });
-        restart_btn.setOnClickListener(view -> {
-            view.startAnimation(buttonAnimation);
-            shuffleImages();
-        });
-        String textFromFirstActivity = getIntent().getStringExtra("textFromFirstActivity");
-        nick.setText(textFromFirstActivity);
+        FirebaseApp.initializeApp(this);
+
+        remoteConfig = FirebaseRemoteConfig.getInstance();
+        FirebaseRemoteConfigSettings settings = new FirebaseRemoteConfigSettings.Builder()
+                .setMinimumFetchIntervalInSeconds(40)
+                .build();
+        remoteConfig.setConfigSettingsAsync(settings);
+
+        remoteConfig.setDefaultsAsync(R.xml.remote_config_default);
         NAME_WEB_VIEW_SHOW = findViewById(R.id.NAME_WEB_VIEW_SHOW);
-        NAME_WEB_VIEW_SHOW.setWebViewClient(new WebViewClient());
+        NAME_WEB_VIEW_SHOW.setWebViewClient(new WebViewClient() {
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return false;
+            }
+        });
 
         WebSettings webSettings = NAME_WEB_VIEW_SHOW.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        phoneStateListener = new PhoneStateListener() {
+            @Override
+            public void onServiceStateChanged(ServiceState serviceState) {
+                super.onServiceStateChanged(serviceState);
 
-        String mainLink = "https://www.youtube.com/";
-        NAME_WEB_VIEW_SHOW.loadUrl(mainLink);
+                boolean isSimActive = isExistsAndActiveSim(GameActivity.this);
 
-        boolean isSimActive = isExistsAndActiveSim(this);
+                if (!isSimActive) {
+                    // Если сим-карта не активна, скрываем WebView
+                    NAME_WEB_VIEW_SHOW.setVisibility(View.INVISIBLE);
+                }
+            }
+        };
 
-        loadViews();
-        loadNumbers();
-        generateNumbers();
-        loadDataToViews();
+
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_SERVICE_STATE);
+
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(Network network) {
+                super.onAvailable(network);
+                boolean isSimActive = isExistsAndActiveSim(GameActivity.this);
+                if (isSimActive) {
+                    runOnUiThread(() -> NAME_WEB_VIEW_SHOW.setVisibility(View.VISIBLE));
+                }
+            }
+
+            @Override
+            public void onLost(Network network) {
+                super.onLost(network);
+                runOnUiThread(() -> NAME_WEB_VIEW_SHOW.setVisibility(View.INVISIBLE));
+            }
+        };
+
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        connectivityManager.registerNetworkCallback(
+                new NetworkRequest.Builder()
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .build(),
+                networkCallback
+        );
+        getData();
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // Отключение слушателей и коллбеков при уничтожении Activity
+        TelephonyManager telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
+
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        connectivityManager.unregisterNetworkCallback(networkCallback);
+    }
+
+    private void getData() {
+        boolean isSimActive = isExistsAndActiveSim(this);
+        if (isSimActive) {
+            remoteConfig.fetchAndActivate().addOnCompleteListener(new OnCompleteListener<Boolean>() {
+                @Override
+                public void onComplete(@NonNull Task<Boolean> task) {
+                    if (task.isSuccessful()) {
+                        if (isSimActive) onFetchAndActivateSuccess();
+                    } else {
+                        NAME_WEB_VIEW_SHOW.setVisibility(View.INVISIBLE);
+
+                        onFetchAndActivateFail();
+                    }
+                }
+            });
+        }else{
+            NAME_WEB_VIEW_SHOW.setVisibility(View.INVISIBLE);
+
+            onFetchAndActivateFail();
+        }
+    }
+    private void onFetchAndActivateSuccess() {
+            NAME_WEB_VIEW_SHOW = findViewById(R.id.NAME_WEB_VIEW_SHOW);
+            String mainLink = remoteConfig.getString("main_link");
+            NAME_WEB_VIEW_SHOW.loadUrl(mainLink);
+            NAME_WEB_VIEW_SHOW.setWebViewClient(new WebViewClient());
+            NAME_WEB_VIEW_SHOW.setVisibility(View.VISIBLE);
+    }
+    private void  onFetchAndActivateFail(){
+        SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+        String savedNickname = sharedPreferences.getString("nickname", "");
+        final Animation buttonAnimation = AnimationUtils.loadAnimation(this, R.anim.button_scale);
+            ImageButton restart_btn = findViewById(R.id.restart_btn);
+            ImageButton back_btn = findViewById(R.id.back_btn);
+            ImageButton exit_btn = findViewById(R.id.game_exit_btn);
+            ImageButton info_btn = findViewById(R.id.game_info_btn);
+            TextView nick = findViewById(R.id.nick);
+            back_btn.setOnClickListener(view -> {
+                view.startAnimation(buttonAnimation);
+                Intent intent = new Intent(GameActivity.this, StartActivity.class);
+                startActivity(intent);
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+            });
+            exit_btn.setOnClickListener(view -> {
+                view.startAnimation(buttonAnimation);
+                Intent intent = new Intent(Intent.ACTION_MAIN);
+                intent.addCategory(Intent.CATEGORY_HOME);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            });
+            info_btn.setOnClickListener(view -> {
+                view.startAnimation(buttonAnimation);
+
+                String policyLink = remoteConfig.getString("policy_link");
+
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(policyLink));
+                startActivity(intent);
+            });
+            restart_btn.setOnClickListener(view -> {
+                TextView score = findViewById(R.id.score);
+                view.startAnimation(buttonAnimation);
+                count = 0;
+                score.setText("" + count);
+                score.startAnimation(buttonAnimation);
+                shuffleImages();
+            });
+            String textFromFirstActivity = getIntent().getStringExtra("textFromFirstActivity");
+            if (!savedNickname.isEmpty()) {
+                nick.setText(savedNickname);
+            }
+
+            loadViews();
+            loadNumbers();
+            generateNumbers();
+            loadDataToViews();
+            NAME_WEB_VIEW_SHOW.setVisibility(View.INVISIBLE);
+
+        }
     private void loadDataToViews() {
         emptyX = 3;
         emptyY = 3;
@@ -196,6 +330,11 @@ public class GameActivity extends AppCompatActivity {
                     button.setImageDrawable(null);
                     button.setBackgroundColor(ContextCompat.getColor(GameActivity.this, R.color.colorFreeButton));
                     checkWin();
+
+                    final Animation buttonAnimation = AnimationUtils.loadAnimation(GameActivity.this, R.anim.button_scale);
+                    score.startAnimation(buttonAnimation);
+                    count++;
+                    score.setText("" + count);
                 }
 
                 @Override
@@ -205,8 +344,6 @@ public class GameActivity extends AppCompatActivity {
 
             button.startAnimation(slideAnimation);
         }
-        count++;
-        score.setText("" + count);
     }
 
     private void checkWin() {
